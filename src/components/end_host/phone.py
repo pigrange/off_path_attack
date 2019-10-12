@@ -4,7 +4,7 @@
 # @Tool ：PyCharm
 
 
-from src.components.end_host.system.user_interface import UserInterface
+from src.components.end_host.system_service.user_interface import UserInterface
 from src.components.attacker.malware import Parasitic
 
 

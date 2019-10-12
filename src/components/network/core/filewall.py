@@ -9,10 +9,10 @@ from src.components.network.base.network_node import NetworkNode
 class FileWall(NetworkNode):
     """防火墙类"""
 
-    def on_package(self, prev):
+    def on_package(self, prev, package):
         pass
 
-    def transmit_package(self):
+    def transmit_package(self,package):
         """
         防火墙同样可以发送ICMP报文
         :return:

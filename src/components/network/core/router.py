@@ -9,10 +9,10 @@ from src.components.network.base.network_node import NetworkNode
 class Router(NetworkNode):
     """路由器类"""
 
-    def transmit_package(self):
+    def transmit_package(self, package):
         pass
 
-    def on_package(self, prev):
+    def on_package(self, prev, package):
         pass
 
     def __init__(self):

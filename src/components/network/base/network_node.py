@@ -10,9 +10,8 @@ class NetworkNode:
     __metaclass__ = ABCMeta
 
     @abstractmethod
-    def on_package(self, prev):
+    def on_package(self, prev, package):
         pass
 
-    @abstractmethod
-    def transmit_package(self):
+    def transmit_package(self, package):
         pass
