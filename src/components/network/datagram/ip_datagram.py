@@ -6,5 +6,7 @@
 
 
 class IPDatagram:
-    def __init__(self, tcp_package, origin,dest):
+    def __init__(self, tcp_package, origin, dest):
+        self.origin = origin
+        self.tcp_package = tcp_package
         pass

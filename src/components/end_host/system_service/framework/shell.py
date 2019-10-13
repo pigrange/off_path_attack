@@ -7,6 +7,7 @@
 
 class Shell:
     def __init__(self, os):
+        os.register_app(self)
         self.__os = os
         pass
 
