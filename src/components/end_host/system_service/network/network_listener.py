@@ -15,5 +15,5 @@ class NetWorkListener:
         pass
 
     @abstractmethod
-    def on_establish_connection(self, origin, target):
+    def on_establish_connection(self, origin, dest):
         pass

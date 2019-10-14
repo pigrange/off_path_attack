@@ -5,10 +5,17 @@
 # @Description: 
 
 
+HIGH_PRIVILEGE_SHELL_COUNT = 0
+SHELL_COUNT = 0
+
+
 class Shell:
     def __init__(self, os):
+        global SHELL_COUNT
         os.register_app(self)
         self.__os = os
+        self.name = 'Shell_' + str(SHELL_COUNT)
+        SHELL_COUNT += 1
         pass
 
     # 通过shell查询网络数据
@@ -33,6 +40,10 @@ class Shell:
     def get_ip_addr(self):
         return self.__os.get_ip_addr()
 
+    # 获取此shell对应的端口号
+    def get_port(self):
+        return self.__os.map_app_to_port(self)
+
     # 通过shell发送网络消息
     def post_message(self, url, msg):
         """
@@ -46,15 +57,15 @@ class Shell:
         pass
 
     # os处理消息后将消息丢给指定端口的shell, 在这里回调
-    @staticmethod
-    def handle_message(msg):
+    def handle_message(self, msg):
         """
         Shell处理消息，并将消息返回给应用层
         这里直接print消息就行了
         :param msg: 应该提供给应用层的消息
         :return: 返回给应用层的数据
         """
-        print(msg)
+        print(self.name, msg)
+
         # todo
 
     # 外部的程序或用户等，本质是通过shell和系统进行交互的
@@ -70,5 +81,8 @@ class Shell:
 # 高权限的shell
 class HighPrivilegeShell(Shell):
     def __init__(self, os):
+        global HIGH_PRIVILEGE_SHELL_COUNT
         super().__init__(os)
         self.__os = os
+        self.name = 'HighPrivilegeShell_' + str(HIGH_PRIVILEGE_SHELL_COUNT)
+        HIGH_PRIVILEGE_SHELL_COUNT += 1

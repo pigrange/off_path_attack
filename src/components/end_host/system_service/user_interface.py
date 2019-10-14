@@ -3,7 +3,7 @@
 # @Date ：10/11/2019 7:10 PM
 # @Tool ：PyCharm
 
-from src.components.end_host.system_service.framework.os import os_start
+from src.components.end_host.system_service.framework.x_os import os_start
 
 
 # device userInterface是面向设备使用者的一层抽象，当userInterface被实例化的时候，代表了这个系统已经启动

@@ -3,9 +3,10 @@
 # @Date: 10/11/2019 8:25 PM
 # @Tool: PyCharm
 # @Description: 网络适配器,用于握手和通信
-from src.components.network.base.network_node import NetworkNode
 from abc import ABCMeta, abstractmethod
 
+from src.components.network import network
+from src.components.network.base.network_node import NetworkNode
 from src.components.network.datagram.ip_datagram import IPDatagram
 
 
@@ -21,34 +22,29 @@ class NetworkAdapter(NetworkNode):
         """
         origin_ip = self.ip
         package = IPDatagram(tcp_pack, origin_ip, dest_ip)
-        self.transmit_package(package)
+        next_node = self.transpond_table[dest_ip]
+        self.transmit_package(package, next_node)
         pass
 
-    def transmit_package(self, package):
-        pass
-
-    def on_package(self, prev, package):
-        pass
-
-    def process_package(self, package):
+    def handle_package(self, package):
         """
-        预处理网络数据包，判断是否是自己的，判断TTL是否有效...
-        通知注册的网络监听，收到了消息
+        网络适配器处理消息，判断ttl，并决定是否将此消息返还给操作系统
         :param package:
         :return:
         """
-        # todo 处理消息的逻辑
-        self.CallBack.on_package(package)
-        # todo 丢弃消息的逻辑
-        pass
+        ttl = package.ttl
+        # 如果消息的ttl小于0了,说明消息已经过期,这个时候回一个ICMP报文
+        if ttl < 0:
+            # todo 回发一个ICMP报文
+            return
 
-    def is_destination(self, addr):
-        pass
+        # 把消息丢给操作系统
+        self.callBack.on_package(package)
 
     def __init__(self, callback):
         super().__init__()
-        self.CallBack = callback
-        self.ip = None
+        self.callBack = callback
+        network.join(self)
 
     class CallBack:
         __metaclass__ = ABCMeta

@@ -13,6 +13,7 @@ from src.components.network.datagram.ip_datagram import IPDatagram
 from src.components.network.datagram.tcp_datagram import TCPDatagram
 
 
+
 class __OS(NetworkAdapter.CallBack):
     def __init__(self):
         self.network_info = NetworkInfo()
@@ -73,28 +74,33 @@ class __OS(NetworkAdapter.CallBack):
         state = fsm.state()
 
         # 服务端调用,接受到了客户端消息的状态
-        if state is 'close':
+        if state is 'closed':
             # flag格式(ack,rst,syn)
             flags = tcp_pack.flags
             # 这种包直接丢弃
-            if flags is not (0, 0, 1):
+            if flags[2] is not 1:
                 return
-
-            second_shake = self.gen_tcp_pack(dest_port, app)
+            print('服务器收到第一次握手,准备第二次握手')
+            second_shake = self.gen_tcp_pack(url, app)
 
             # 缓存客户端口的seq,由于gen_tcp_pack的时候才会建立seq
             # 所以在它之后创建
-            remote_seq = tcp_pack.seq
-            self.__url_seq_map[url][1] = remote_seq
+            # +1是因为客户端发送了第一个握手包
+            remote_seq = tcp_pack.seq + 1
+            self.update_remote_seq(remote_seq, url)
 
             # 发送syn=1,ack 进行第二次握手
             second_shake.set_flags(ack=tcp_pack.seq + 1, syn=1)
-            self.network_adapter.send_package(second_shake, dest_ip)
             # 更新为syn_rcved状态
             fsm.receive()
+            print('服务器发送第二次握手消息')
+            print('服务器端seq', self.__url_seq_map[url][0])
+            print('服务端维护的客户端seq', self.__url_seq_map[url][1])
+            self.network_adapter.send_package(second_shake, dest_ip)
             return
 
-        # 客户端调用，发送了第一次握手后，收到回复的状态
+        # 客户端调用，发送了第一次握手后，收到回复的状态z
+        # 这个方法内部进行第三次TCP握手
         elif state is 'syn_send':
             # 检查服务器回复的是否是syn+ack,如果是的话，就进行第三次握手
             flags = tcp_pack.flags
@@ -103,25 +109,32 @@ class __OS(NetworkAdapter.CallBack):
                 return
             ack = flags[0]
             # ack应该为自己的seq+1
-            if ack is not self.__url_seq_map[0] + 1:
+            expect_ack = self.__url_seq_map[url][0]
+            if not ack == expect_ack:
                 return
 
-            # 缓存服务端的seq
-            remote_seq = tcp_pack.seq
-            self.__url_seq_map[url][1] = remote_seq
+            print('客户端收到了服务端的第二次握手')
+            # 缓存服务端的seq, +1是因为服务端的第二次握手占用了一个长度
+            remote_seq = tcp_pack.seq + 1
+            self.update_remote_seq(remote_seq, url)
 
             # 进行第三次握手
             third_handshake = self.gen_tcp_pack(url, app)
-            (origin_seq, remote_seq) = self.__url_seq_map[app]
-            third_handshake.set_flags(ack=remote_seq + 1)
-            self.network_adapter.send_package(third_handshake, dest_ip)
-
+            third_handshake.set_flags(ack=tcp_pack.seq + 1)
             # 更新为establish状态
             fsm.establish()
+            print('客户端发送第三次握手，并建立连接')
+            self.network_adapter.send_package(third_handshake, dest_ip)
+
+            # 通知监听器,TCP握手已经完成
+            origin = (self.get_ip_addr(), origin_port)
+            dest = (dest_ip, dest_port)
+            self.listener_info.on_establish_connection(origin, dest)
 
             # 将缓存的消息发送给服务器
             cached_msg = self.__url_message_map[url]
             self.__url_message_map.pop(url)
+            print('客户端发送缓存的消息')
             self.send_message(cached_msg, url, app)
 
             return
@@ -141,25 +154,85 @@ class __OS(NetworkAdapter.CallBack):
             if flags[2] == 1:
                 return
 
-            # 接受到第三个ack，建立连接
-            # ack应该为自己的seq+1
+            # 接受到第三次握手，建立连接
+            # ack应该为自己的seq+1,seq应该为当前的seq+1
             ack = flags[0]
-            if ack is not self.__url_seq_map[0] + 1:
+            expect_ack = self.__url_seq_map[url][0]
+            expect_seq = self.__url_seq_map[url][1]
+            if (ack == expect_ack) & (expect_seq == tcp_pack.seq):
+                print('服务端收到第三个握手消息，建立连接')
+                remote_seq = tcp_pack.seq + 1
+                self.update_remote_seq(remote_seq, url)
                 fsm.establish()
-                return
+            return
 
         # 客户段和服务端均调用
         elif state is 'establish':
+            print('收到对方消息')
             seq = tcp_pack.seq
-            # 接受到的消息应该是连接中的seq+1
-            if seq is not self.__url_seq_map[1] + 1:
+            # 接受到的消息应该是连接中的seq
+            expect_seq = self.__url_seq_map[url][1]
+            if not seq == expect_seq:
                 return
 
             # 将消息丢给上层应用
             msg = tcp_pack.data
+            # 更新远程seq
+            new_remote_seq = expect_seq + len(msg) + 1
+            # new_remote_seq = expect_seq + 1
+            self.update_remote_seq(new_remote_seq, url)
+            # 将消息丢给上层应用
             app_port = tcp_pack.dest_port
             self.handle_message(msg, app_port)
-            pass
+
+    def update_remote_seq(self, remote_seq, url):
+        (origin_seq, _) = self.__url_seq_map[url]
+        self.__url_seq_map[url] = (origin_seq, remote_seq)
+
+    # shell调用os发送消息
+    def send_message(self, msg, url, app):
+        """
+        将敏文消息封装为ip报文,并为指定的app分配端口号
+        :param url: 目标ip地址和端口号
+        :param msg: 上层传递过来的消息
+        :param app: 上层的应用
+        :return: null
+        """
+        if not self.check_connection(url):
+            # 建立连接
+            self.establish_connection(url)
+
+        # 解析url
+        dest_ip = self.parse_url(url)[0]
+
+        fsm: TCPFSM = self.get_tcp_fsm(url)
+        state = fsm.state()
+
+        if state is 'closed':
+            # 将本来要发送的消息缓存
+            cached_message = self.__url_message_map
+            cached_message[url] = msg
+            first_handshake = self.gen_tcp_pack(url, app)
+            # syn=1,即第一次握手的包
+            first_handshake.set_flags(syn=1)
+            # 转换状态为send
+            fsm.send()
+            print('客户端发送第一次握手')
+            print('客户端的seq', self.__url_seq_map[url][0])
+            self.network_adapter.send_package(first_handshake, dest_ip)
+            return
+        elif state is 'syn_send':
+            # 第三次握手应该在on_package来完成，所以这里就直接返回
+            return
+        elif state is 'syn_rcved':
+            # 这种状态在发送包的时候不存在，直接return
+            return
+        elif state is 'establish':
+            # 打包生成TCP包
+            tcp_pack = self.gen_tcp_pack(url, app, msg)
+            # 将TCP报文丢给网络适配器发送
+            self.network_adapter.send_package(tcp_pack, dest_ip)
+            return
 
     # os将消息丢到指定端口号的应用
     def handle_message(self, msg, port):
@@ -187,52 +260,7 @@ class __OS(NetworkAdapter.CallBack):
         return url[0:index], url[index + 1:len(url)]
         pass
 
-    # shell调用os发送消息
-    def send_message(self, msg, url, app):
-        """
-        将敏文消息封装为ip报文,并为指定的app分配端口号
-        :param url: 目标ip地址和端口号
-        :param msg: 上层传递过来的消息
-        :param app: 上层的应用
-        :return: null
-        """
-        if not self.check_connection(url):
-            # 缓存当前的消息
-            self.__url_message_map[url] = (msg, app)
-            # 建立连接
-            self.establish_connection(url)
-
-        # 解析url
-        dest_ip = self.parse_url(url)[0]
-
-        fsm: TCPFSM = self.get_tcp_fsm(url)
-        state = fsm.state()
-
-        if state is 'closed':
-            # 将本来要发送的消息缓存
-            cached_message = self.__url_message_map
-            cached_message[url] = msg
-            first_handshake = self.gen_tcp_pack(url, app)
-            # syn=1,即第一次握手的包
-            first_handshake.set_flags(syn=1)
-            self.network_adapter.send_package(first_handshake, dest_ip)
-            # 转换状态为send
-            fsm.send()
-            return
-        elif state is 'syn_send':
-            # 第三次握手应该在on_package来完成，所以这里就直接返回
-            return
-        elif state is 'syn_rcved':
-            # 这种状态在发送包的时候不存在，直接return
-            return
-        elif state is 'establish':
-            # 打包生成TCP包
-            tcp_pack = self.gen_tcp_pack(url, app, msg)
-            # 将TCP报文丢给网络适配器发送
-            self.network_adapter.send_package(tcp_pack, dest_ip)
-            return
-
-    # 生成tcp报文
+    # 生成tcp报文s
     def gen_tcp_pack(self, url, app, msg=''):
         """
         把消息打包成tcp报文
@@ -249,14 +277,13 @@ class __OS(NetworkAdapter.CallBack):
         seq_map = self.__url_seq_map
         if url in seq_map.keys():
             (seq, remote_seq) = seq_map[url]
-            seq += 1
-            seq_map[url] = (seq, remote_seq)
         else:
-            seq = random.randint((0, 4294967295))
-            seq_map[url] = (seq, 0)
+            (seq, remote_seq) = random.randint(0, 4294967295), 0
+
+        new_seq = seq + len(msg) + 1
+        seq_map[url] = (new_seq, remote_seq)
 
         return TCPDatagram(origin_port, dest_port, data=msg, seq=seq)
-        pass
 
     # 添加网络包的监听器
     def add_network_listener(self, listener):
@@ -270,7 +297,7 @@ class __OS(NetworkAdapter.CallBack):
         :param app:
         :return: 端口号
         """
-        port = hash(app) % 65536
+        port = str(hash(app) % 65536)
         # 如果缓存了port的话,就直接返回端口
         if port not in self.__port_app__map.keys():
             # 缓存端口
@@ -304,7 +331,7 @@ class __OS(NetworkAdapter.CallBack):
         :return:
         """
         # todo 更新 network_info
-        return
+        return True
 
     # 获取本机的ip地址
     def get_ip_addr(self):
@@ -326,10 +353,10 @@ class __OS(NetworkAdapter.CallBack):
                 if listener is NetWorkListener:
                     listener.on_package_received()
 
-        def on_establish_connection(self, origin, target):
+        def on_establish_connection(self, origin, dest):
             for listener in self.listeners:
                 if listener is NetWorkListener:
-                    listener.on_establish_connection(origin, target)
+                    listener.on_establish_connection(origin, dest)
 
 
 def os_start():
