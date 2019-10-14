@@ -14,6 +14,9 @@ class NetworkAdapter(NetworkNode):
     """网络适配器类"""
 
     def send_package(self, tcp_pack, dest_ip):
+        self.handler.post(fun=self.do_send_package, args=(tcp_pack, dest_ip))
+
+    def do_send_package(self, tcp_pack, dest_ip):
         """
         将TCP数据包封装成IP数据包,并发送到网络
         :param tcp_pack: TCP数据包
@@ -27,16 +30,8 @@ class NetworkAdapter(NetworkNode):
         pass
 
     def handle_package(self, package):
-        """
-        网络适配器处理消息，判断ttl，并决定是否将此消息返还给操作系统
-        :param package:
-        :return:
-        """
-        ttl = package.ttl
-        # 如果消息的ttl小于0了,说明消息已经过期,这个时候回一个ICMP报文
-        if ttl < 0:
-            # todo 回发一个ICMP报文
-            return
+        # 判断消息的ttl
+        super().handle_package(package)
 
         # 把消息丢给操作系统
         self.callBack.on_package(package)

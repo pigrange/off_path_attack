@@ -57,15 +57,21 @@ class Shell:
         pass
 
     # os处理消息后将消息丢给指定端口的shell, 在这里回调
-    def handle_message(self, msg):
+    def handle_message(self, msg, msg_source):
         """
         Shell处理消息，并将消息返回给应用层
         这里直接print消息就行了
+        :param msg_source: 消息的源头url
         :param msg: 应该提供给应用层的消息
         :return: 返回给应用层的数据
         """
         print(self.name, msg)
 
+        # just for test
+        if str(msg)[0] == ' ':
+            return
+        ack_msg = ' 回复:已收到: ' + msg
+        self.post_message(msg_source, ack_msg)
         # todo
 
     # 外部的程序或用户等，本质是通过shell和系统进行交互的

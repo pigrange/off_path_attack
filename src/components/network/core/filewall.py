@@ -12,7 +12,7 @@ class FileWall(NetworkNode):
     def on_package(self, prev, package):
         pass
 
-    def transmit_package(self,package):
+    def transmit_package(self, package):
         """
         防火墙同样可以发送ICMP报文
         :return:
@@ -20,6 +20,7 @@ class FileWall(NetworkNode):
         pass
 
     def __init__(self):
+        super().__init__()
         pass
 
 
