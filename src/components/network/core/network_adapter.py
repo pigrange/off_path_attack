@@ -12,25 +12,19 @@ from src.components.network.datagram.ip_datagram import IPDatagram
 class NetworkAdapter(NetworkNode):
     """网络适配器类"""
 
-    def send_package(self, tcp_pack, dest_ip):
-        self.handler.post(fun=self.do_send_package, args=(tcp_pack, dest_ip))
+    def send_package(self, ip_pack):
+        self.handler.post(fun=self.do_send_package, args=ip_pack)
 
-    def do_send_package(self, tcp_pack, dest_ip):
+    def do_send_package(self, ip_pack):
         """
         将TCP数据包封装成IP数据包,并发送到网络,运行在网络适配器自己的线程上
-        :param tcp_pack: TCP数据包
-        :param dest_ip:  目标ip地址
+        :param ip_pack: IP数据包
         :return:
         """
-        origin_ip = self.ip
-        package = IPDatagram(tcp_pack, origin_ip, dest_ip)
-        self.transmit_package(package)
+        self.transmit_package(ip_pack)
         pass
 
     def handle_package(self, package):
-        # 判断消息的ttl
-        super().handle_package(package)
-
         # 把消息丢给操作系统
         self.callBack.on_package(package)
 
@@ -44,3 +38,12 @@ class NetworkAdapter(NetworkNode):
         @abstractmethod
         def on_package(self, package):
             pass
+
+    def process_package(self, package):
+        super().process_package(package)
+        dest_ip = package.dest
+        if dest_ip == self.ip:
+            self.handle_package(package)
+            return True
+
+        return False

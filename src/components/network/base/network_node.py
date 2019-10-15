@@ -35,22 +35,12 @@ class NetworkNode:
         :param package: IP数据包
         :return: null
         """
-        # for test
-        # 节点处理时延,5毫秒
-        time.sleep(0.005)
 
-        dest_ip = package.dest
-
-        if dest_ip == self.ip:
-            self.handle_package(package)
-
-        # 不知道这个包发给谁，就直接丢弃这个包
-        if dest_ip not in self.transpond_table.keys():
-            return
+        handled = self.process_package(package)
 
         # 转发ip数据包
-        self.transmit_package(package)
-        pass
+        if not handled:
+            self.transmit_package(package)
 
     # 转发ip数据包
     def transmit_package(self, package):
@@ -76,14 +66,10 @@ class NetworkNode:
         next_node.on_package(self, package)
         pass
 
-    def handle_package(self, package):
+    def process_package(self, package):
         """
-          处理消息，判断ttl，并决定是否将此消息返还给操作系统
-          :param package:
-          :return:
-          """
-        ttl = package.ttl
-        # 如果消息的ttl小于0了,说明消息已经过期,这个时候回一个ICMP报文
-        if ttl < 0:
-            # todo 回发一个ICMP报文
-            return
+        节点检查该消息的有效性,检查该消息是否有该节点处理
+        :param package:
+        :return: 节点是否处理了这个消息
+        """
+        return False

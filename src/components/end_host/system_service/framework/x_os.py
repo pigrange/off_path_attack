@@ -55,6 +55,7 @@ class __OS(NetworkAdapter.CallBack):
         if not self.update_network_info(package):
             return
 
+        # 通知网络监听者,这里是malware
         if self.listener_info is not None:
             self.listener_info.on_package()
 
@@ -104,7 +105,7 @@ class __OS(NetworkAdapter.CallBack):
             # 更新为syn_rcved状态
             fsm.receive()
             print('server: 以发送第二次握手消息')
-            self.network_adapter.send_package(second_shake, dest_ip)
+            self.send_tcp_package(second_shake, dest_ip)
             return
 
         # 客户端调用，发送了第一次握手后，收到回复的状态
@@ -135,7 +136,7 @@ class __OS(NetworkAdapter.CallBack):
 
             # 发送第三次握手消息
             print('client:已发送第三次握手消息,建立连接')
-            self.network_adapter.send_package(third_handshake, dest_ip)
+            self.send_tcp_package(third_handshake, dest_ip)
 
             # 通知监听器,TCP握手已经完成
             origin = (self.get_ip_addr(), origin_port)
@@ -157,6 +158,7 @@ class __OS(NetworkAdapter.CallBack):
 
             # 接收到rst，重置
             if flags[1] == 1:
+                print('server', '收到rst,关闭连接')
                 fsm.reset()
                 self.__url_seq_map.pop(key)
                 return
@@ -193,7 +195,7 @@ class __OS(NetworkAdapter.CallBack):
 
             # 将消息丢给上层应用
             app_port = tcp_pack.dest_port
-            self.handle_message(msg, app_port, dest_url)
+            self.dispatch_message(msg, app_port, dest_url)
             return
 
     # 更新tcp连接中的对方的seq
@@ -245,7 +247,7 @@ class __OS(NetworkAdapter.CallBack):
 
             # 转换状态为send
             fsm.send()
-            self.network_adapter.send_package(first_handshake, dest_ip)
+            self.send_tcp_package(first_handshake, dest_ip)
             print('client: 已发送第一次握手消息')
             return
 
@@ -264,11 +266,22 @@ class __OS(NetworkAdapter.CallBack):
             # 打包生成TCP包
             tcp_pack = self.gen_tcp_pack(dest_url, origin_port, msg)
             # 将TCP报文丢给网络适配器发送
-            self.network_adapter.send_package(tcp_pack, dest_ip)
+            self.send_tcp_package(tcp_pack, dest_ip)
             return
 
+    # 将TCP报文丢给网络适配器发送
+    def send_tcp_package(self, tcp_pack, dest_ip):
+        ip_addr = self.get_ip_addr()
+        ip_pack = IPDatagram(tcp_pack, ip_addr, dest_ip)
+        self.network_adapter.send_package(ip_pack=ip_pack)
+        return
+
+    # 让网络适配器直接发送IP报文
+    def send_ip_package(self, ip_pack):
+        self.network_adapter.send_package(ip_pack=ip_pack)
+
     # os将消息丢到指定端口号的应用
-    def handle_message(self, msg, port, msg_source):
+    def dispatch_message(self, msg, port, msg_source):
         """
         向上层返回消息
         :param msg_source: 消息的源头
@@ -393,14 +406,15 @@ class __OS(NetworkAdapter.CallBack):
         # 接收到消息的时候，广播所有的listener
         def on_package(self):
             for listener in self.listeners:
-                if listener is NetWorkListener:
+                if isinstance(listener, NetWorkListener):
+                    print('------------------------')
                     listener.on_package_received()
             return
 
         # 建立了连接的时候，广播所有的listener
         def on_establish_connection(self, origin, dest):
             for listener in self.listeners:
-                if listener is NetWorkListener:
+                if isinstance(listener, NetWorkListener):
                     listener.on_establish_connection(origin, dest)
             return
 

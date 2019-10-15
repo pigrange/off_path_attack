@@ -2,13 +2,12 @@
 # @Author: john pig
 # @Date: 10/12/2019 1:00 PM
 # @Tool: PyCharm
-# @Description: 
+# @Description:
 
 from abc import ABCMeta, abstractmethod
 
 
 class NetWorkListener:
-    __metaclass__ = ABCMeta
 
     @abstractmethod
     def on_package_received(self):

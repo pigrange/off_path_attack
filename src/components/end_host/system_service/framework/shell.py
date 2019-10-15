@@ -92,3 +92,11 @@ class HighPrivilegeShell(Shell):
         self.__os = os
         self.name = 'HighPrivilegeShell_' + str(HIGH_PRIVILEGE_SHELL_COUNT)
         HIGH_PRIVILEGE_SHELL_COUNT += 1
+
+    # 直接发送tcp包
+    def send_tcp_package(self, package, dest_ip):
+        self.__os.send_tcp_package(package, dest_ip)
+
+    # 直接发送ip包
+    def send_ip_package(self, package):
+        self.__os.send_ip_package(package)
