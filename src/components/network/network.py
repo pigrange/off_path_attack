@@ -5,8 +5,6 @@
 # @Description: 整个网络的抽象模型
 import random
 
-from src.components.network.base.network_node import NetworkNode
-
 
 class Network:
     """路由器链,由路由器节点构成的链表"""
@@ -15,7 +13,6 @@ class Network:
         self.network_node_chain = None
         pass
 
-    # todo 将Network_node加入到网络,返回IP
     def join(self, new_node):
         # ip直接设置成0到4294967295的随机数
         distributed_ip = str(random.randint(0, 4294967295))
@@ -52,10 +49,15 @@ class Network:
 RUNNING_NETWORK = Network()
 
 
-def join(network_node: NetworkNode):
+def join(network_node):
     """
     网络节点加入到网络中,并返回该节点的ip地址
     :param network_node:
     :return: ip地址
     """
     RUNNING_NETWORK.join(network_node)
+
+
+# 输出整个网络结构
+def net_status():
+    pass

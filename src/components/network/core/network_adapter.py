@@ -5,7 +5,6 @@
 # @Description: 网络适配器,用于握手和通信
 from abc import ABCMeta, abstractmethod
 
-from src.components.network import network
 from src.components.network.base.network_node import NetworkNode
 from src.components.network.datagram.ip_datagram import IPDatagram
 
@@ -18,15 +17,14 @@ class NetworkAdapter(NetworkNode):
 
     def do_send_package(self, tcp_pack, dest_ip):
         """
-        将TCP数据包封装成IP数据包,并发送到网络
+        将TCP数据包封装成IP数据包,并发送到网络,运行在网络适配器自己的线程上
         :param tcp_pack: TCP数据包
         :param dest_ip:  目标ip地址
         :return:
         """
         origin_ip = self.ip
         package = IPDatagram(tcp_pack, origin_ip, dest_ip)
-        next_node = self.transpond_table[dest_ip]
-        self.transmit_package(package, next_node)
+        self.transmit_package(package)
         pass
 
     def handle_package(self, package):
@@ -39,7 +37,6 @@ class NetworkAdapter(NetworkNode):
     def __init__(self, callback):
         super().__init__()
         self.callBack = callback
-        network.join(self)
 
     class CallBack:
         __metaclass__ = ABCMeta

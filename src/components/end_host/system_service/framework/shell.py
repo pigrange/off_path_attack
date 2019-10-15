@@ -65,12 +65,12 @@ class Shell:
         :param msg: 应该提供给应用层的消息
         :return: 返回给应用层的数据
         """
-        print(self.name, msg)
+        print(self.name, ':', msg)
 
         # just for test
         if str(msg)[0] == ' ':
             return
-        ack_msg = ' 回复:已收到: ' + msg
+        ack_msg = ' ' + self.name + '回复:已收到: ' + msg
         self.post_message(msg_source, ack_msg)
         # todo
 

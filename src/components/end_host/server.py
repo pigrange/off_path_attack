@@ -6,6 +6,12 @@ from src.components.end_host.system_service.user_interface import UserInterface
 
 
 class Server:
-    def __init__(self):
-        self.userInterface = UserInterface()
+    def __init__(self, name):
+        self.__userInterface = UserInterface(name)
         pass
+
+    def get_url(self):
+        return self.__userInterface.get_url()
+
+    def post_message(self, url, msg):
+        self.__userInterface.post_message(url, msg)

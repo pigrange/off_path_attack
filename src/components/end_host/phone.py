@@ -12,6 +12,12 @@ class Phone(Parasitic):
     def on_infect(self):
         return self.__user_interface.get_shell()
 
-    def __init__(self):
-        self.__user_interface = UserInterface()
+    def __init__(self, name=None):
+        self.__user_interface = UserInterface(name)
         pass
+
+    def get_url(self):
+        return self.__user_interface.get_url()
+
+    def post_message(self, url, msg):
+        self.__user_interface.post_message(url, msg)

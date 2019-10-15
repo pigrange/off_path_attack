@@ -11,4 +11,8 @@ class IPDatagram:
         self.tcp_package = tcp_package
         self.dest = dest
         self.ttl = ttl
+        self.sent = False
         pass
+
+    def size(self):
+        return 40 + len(self.tcp_package.data)

@@ -2,11 +2,13 @@
 # @Author：john pig
 # @Date ：10/11/2019 8:12 PM
 # @Tool ：PyCharm
+import time
 
-from abc import abstractmethod
-
+from src.components.network import network
 from src.components.network.datagram.ip_datagram import IPDatagram
 from src.util import looper
+
+NETWORK_BANDWIDTH = 1000_000
 
 
 class NetworkNode:
@@ -17,6 +19,7 @@ class NetworkNode:
         self.ip = None
         self.transpond_table = {}
         self.handler = looper.loop()
+        network.join(self)
         pass
 
     # 其他网络节点调用
@@ -32,6 +35,10 @@ class NetworkNode:
         :param package: IP数据包
         :return: null
         """
+        # for test
+        # 节点处理时延,5毫秒
+        time.sleep(0.005)
+
         dest_ip = package.dest
 
         if dest_ip == self.ip:
@@ -40,15 +47,33 @@ class NetworkNode:
         # 不知道这个包发给谁，就直接丢弃这个包
         if dest_ip not in self.transpond_table.keys():
             return
+
+        # 转发ip数据包
+        self.transmit_package(package)
+        pass
+
+    # 转发ip数据包
+    def transmit_package(self, package):
+        """
+        获取ip数据包中的ip地址,根据自己的ip映射表获取下一个节点，并将其转发给下一个节点
+        :param package:ip数据包
+        :return:
+        """
         # 将这个包发送给下一个节点
+        dest_ip = package.dest
         next_node = self.transpond_table[dest_ip]
         # ttl减1
         package.ttl = package.ttl - 1
-        self.transmit_package(IPDatagram, next_node)
-        pass
 
-    def transmit_package(self, package, node):
-        node.on_package(self, package)
+        # 模拟传输时延
+        if not package.sent:
+            byte_count = package.size()
+            send_time = byte_count / NETWORK_BANDWIDTH
+            time.sleep(send_time)
+            print('发送: ', byte_count, 'byte的数据,', '耗时: ', '{:.6f}'.format(send_time), 's')
+            package.sent = True
+
+        next_node.on_package(self, package)
         pass
 
     def handle_package(self, package):

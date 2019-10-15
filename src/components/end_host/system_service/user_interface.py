@@ -11,14 +11,32 @@ from src.components.end_host.system_service.framework.x_os import os_start
 # todo 用户的权限检查
 # device 通过UserInterface 间接通过高权限的shell来控制os
 class UserInterface:
-    def __init__(self):
+    def __init__(self, name=None):
         shell = os_start()
         # user_interface 默认持有的是高优先级的Shell程序
         self.__high_privilege_shell = shell
+        if name is not None:
+            self.set_name(name)
 
     def get_shell(self):
         """
+        自己持有的高权限shell不向外部暴露
         通过高优先级的shell返回一个普通优先级的shell
         :return: 普通优先级的shell
         """
         return self.__high_privilege_shell.new_shell()
+
+    def get_ip_addr(self):
+        return self.__high_privilege_shell.get_ip_addr()
+
+    def get_port(self):
+        return self.__high_privilege_shell.get_port()
+
+    def post_message(self, url, msg):
+        self.__high_privilege_shell.post_message(url, msg)
+
+    def get_url(self):
+        return self.get_ip_addr() + ':' + self.get_port()
+
+    def set_name(self, name):
+        self.__high_privilege_shell.name = name
