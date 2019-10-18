@@ -60,4 +60,9 @@ def join(network_node):
 
 # 输出整个网络结构
 def net_status():
+    net = RUNNING_NETWORK
+    head = net.network_node_chain
+    while head is not None:
+        print(head)
+        head = head.next
     pass

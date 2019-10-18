@@ -10,21 +10,15 @@ from src.components.network.base.network_node import NetworkNode
 ROUTER_COUNT = 0
 
 
-# 在网络中创建路由器
-def add_router_to_net(router_count):
-    for i in range(0, router_count):
-        Router()
-
-
 class Router(NetworkNode):
     """路由器类"""
 
     def transmit_package(self, package):
-        print(self.name, ':', 'on_transmit_package')
+        # print(self.name, ':', 'on_transmit_package')
         super().transmit_package(package)
 
     def on_package(self, prev, package):
-        print(self.name, ':', 'on_package')
+        # print(self.name, ':', 'on_package')
         super().on_package(prev, package)
         pass
 
@@ -45,7 +39,8 @@ class Router(NetworkNode):
         super().process_package(package)
         # for test
         # 节点处理时延,5毫秒
-        time.sleep(0.005)
+        # time.sleep(0.005)
+        time.sleep(0.1)
 
         dest_ip = package.dest
 
@@ -60,3 +55,14 @@ class Router(NetworkNode):
         if dest_ip not in self.transpond_table.keys():
             return True
         return False
+
+
+# 在网络中创建路由器
+def add_router_to_net(router_count, has_firewall=False):
+    for i in range(0, router_count):
+        Router()
+
+        # excuse me ? 为什么要在这里import才可以
+        from src.components.network.core.firewall import FireWall
+        if has_firewall & (i == int(router_count / 2)):
+            FireWall()

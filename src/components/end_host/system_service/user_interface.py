@@ -8,7 +8,7 @@ from src.components.end_host.system_service.framework.x_os import os_start
 
 # device userInterface是面向设备使用者的一层抽象，当userInterface被实例化的时候，代表了这个系统已经启动
 # userInterface 隐藏了高权限shell的细节，通过暴露给用户指定的方法来间接调用高权限shell的操作
-# todo 用户的权限检查
+# (may) todo 用户的权限检查
 # device 通过UserInterface 间接通过高权限的shell来控制os
 class UserInterface:
     def __init__(self, name=None):

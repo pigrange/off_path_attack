@@ -72,7 +72,6 @@ class Shell:
             return
         ack_msg = ' ' + self.name + '回复:已收到: ' + msg
         self.post_message(msg_source, ack_msg)
-        # todo
 
     # 外部的程序或用户等，本质是通过shell和系统进行交互的
     # 所以shell是可以克隆的

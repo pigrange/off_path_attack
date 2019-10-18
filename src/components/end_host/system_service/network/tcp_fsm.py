@@ -10,7 +10,6 @@
 # 记录那些URL被连接
 # 当os被调用send_message的时候,会去检测目标url是否建立了连接
 # 如果没有建立连接就尝试握手
-# todo TCP有限状态机应该存放自己的seq和目标的seq
 from transitions import Machine
 
 from src.test.test_fsm import Matter
